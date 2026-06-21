@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Harmony Vintage</title>
+    <style>
+        /* Mobile-First Reset */
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: #f4ece1; color: #2c3e50; 
+            font-family: 'Georgia', serif; text-align: center; 
+            padding: 20px 10px; margin: 0;
+        }
+        .header { margin-bottom: 20px; }
+        h1 { color: #5c4033; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; font-size: 26px;}
+        .room-badge { background-color: #8b7355; color: white; padding: 5px 15px; border-radius: 20px; font-size: 16px; }
+        
+        /* Grid Layout - Responsive */
+        .grid-container {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; 
+            max-width: 1000px; margin: auto;
+        }
+        .card {
+            background-color: #ffffff; border: 2px solid #8b7355; border-radius: 10px;
+            padding: 20px; width: 100%; max-width: 400px; /* Fluid width */
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
+        }
+        .card h3 { color: #5c4033; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 18px; margin-top: 0;}
+        
+        /* Inputs & Buttons */
+        input, select { 
+            width: 100%; padding: 12px; margin: 8px 0; 
+            border: 1px solid #ccc; border-radius: 5px; font-family: 'Arial'; font-size: 16px;
+        }
+        button {
+            background-color: #5c4033; color: white; border: none; padding: 12px 15px; cursor: pointer;
+            border-radius: 5px; width: 100%; margin-top: 10px; font-family: 'Georgia', serif; 
+            font-weight: bold; font-size: 16px; transition: 0.3s;
+        }
+        button:hover { background-color: #3e2a21; }
+        .danger-btn { background-color: #c0392b; }
+        .danger-btn:hover { background-color: #962d22; }
+        
+        /* Header Buttons */
+        .header-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+        .action-btn { background-color: #27ae60; width: auto; padding: 10px 15px; margin: 0; }
+        
+        /* Expense Feed */
+        .expense-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #fdfbf7; padding: 12px; border-left: 4px solid #8b7355; margin-bottom: 10px; text-align: left;
+            border-radius: 4px;
+        }
+        .del-btn { background: none; color: #c0392b; width: auto; margin: 0; padding: 5px 10px; font-size: 18px; }
+        .del-btn:hover { background: none; color: red; }
+
+        /* Settle Up Text */
+        .balance-item { text-align: left; padding: 8px 0; font-size: 16px; font-family: 'Arial'; border-bottom: 1px solid #eee; }
+        .balance-item:last-child { border-bottom: none; }
+        .owes { color: #c0392b; font-weight: bold; }
+        .gets { color: #27ae60; font-weight: bold; }
+
+        /* Print Settings (PDF) */
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white; padding: 0; }
+            .card { box-shadow: none; border: 1px solid #000; width: 100%; max-width: 100%; margin-bottom: 20px;}
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .header-buttons { flex-direction: column; width: 100%; max-width: 400px; margin: 20px auto 0; }
+            .action-btn, .danger-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Harmony Vintage</h1>
+        <p>Room: <span class="room-badge" id="displayRoomCode">---</span></p>
+        <div class="no-print header-buttons">
+            <button class="action-btn" onclick="window.print()">📥 Save PDF</button>
+            <button class="action-btn" onclick="sendWhatsApp()">💬 WhatsApp</button>
+            <button class="danger-btn" onclick="powerReset()">Power Reset</button>
+        </div>
+    </div>
+
+    <div class="grid-container">
+        
+        <div class="card">
+            <h3>Room Dashboard</h3>
+            <h2 style="color: #27ae60; margin: 10px 0;">Total Spent: ₹<span id="totalSpent">0</span></h2>
+            <h4 style="color: #8b7355; margin-bottom: 20px;">Next Buyer: <span id="whoBuysNext" style="font-weight:bold; font-size: 20px;">...</span></h4>
+            
+            <h3>Settle Up Status</h3>
+            <div id="settleUpBox"></div>
+        </div>
+
+        <div class="card no-print">
+            <h3>Log a New Expense</h3>
+            <select id="expensePayer"><option value="">-- Who Paid? --</option></select>
+            <input type="number" id="expenseAmount" placeholder="Amount (e.g., 150)" inputmode="decimal">
+            <select id="expenseCategory" onchange="toggleCustom()">
+                <option value="Groceries">Groceries</option>
+                <option value="Snacks">Snacks</option>
+                <option value="Utilities">Utilities/Rent</option>
+                <option value="Other">Other (Type manually)</option>
+            </select>
+            <input type="text" id="customCategory" placeholder="What did you buy?" style="display: none;">
+            <button onclick="logExpense()">Submit Bill</button>
+        </div>
+
+        <div class="card">
+            <h3>Expense History</h3>
+            <div id="expenseFeed"></div>
+        </div>
+
+        <div class="card no-print">
+            <h3>Register a Roommate</h3>
+            <input type="text" id="newName" placeholder="Name (e.g., Kyson)">
+            <input type="number" id="newLimit" placeholder="Spending Limit (Optional)" inputmode="numeric">
+            <button onclick="addRoommate()" style="background-color: #8b7355;">Add to Room</button>
+        </div>
+
+    </div>
+
+    <script>
+        const roomId = localStorage.getItem('harmony_room_id');
+        const roomCode = localStorage.getItem('harmony_room_code');
+        let whatsappData = ""; 
+
+        if (!roomId) window.location.href = "/";
+        document.getElementById('displayRoomCode').innerText = roomCode;
+
+        async function loadRoomData() {
+            const res = await fetch(`/get-room-data/${roomId}`);
+            const data = await res.json();
+
+            document.getElementById('totalSpent').innerText = data.total_spent.toFixed(2);
+            document.getElementById('whoBuysNext').innerText = data.who_buys_next;
+
+            const dropdown = document.getElementById('expensePayer');
+            dropdown.innerHTML = '<option value="">-- Who Paid? --</option>';
+            data.raw_people.forEach(p => { dropdown.innerHTML += `<option value="${p.id}">${p.name}</option>`; });
+
+            const feed = document.getElementById('expenseFeed');
+            feed.innerHTML = '';
+            data.expenses.forEach(e => {
+                feed.innerHTML += `
+                    <div class="expense-item">
+                        <div><strong>${e.payer}</strong> paid ₹${e.amount}<br><small style="color:gray;">${e.category}</small></div>
+                        <button class="del-btn no-print" onclick="deleteExpense('${e.id}')">✖</button>
+                    </div>`;
+            });
+
+            const settleBox = document.getElementById('settleUpBox');
+            settleBox.innerHTML = '';
+            whatsappData = `*Harmony Vintage | Room ${roomCode}*\nTotal: ₹${data.total_spent}\nNext Buyer: ${data.who_buys_next}\n\n*Balances:*\n`;
+            
+            data.roommates.forEach(p => {
+                let status = "";
+                if (p.balance > 0) {
+                    status = `<span class="gets">gets ₹${p.balance.toFixed(2)}</span>`;
+                    whatsappData += `- ${p.name} gets ₹${p.balance.toFixed(2)}\n`;
+                } else if (p.balance < 0) {
+                    status = `<span class="owes">owes ₹${Math.abs(p.balance).toFixed(2)}</span>`;
+                    whatsappData += `- ${p.name} owes ₹${Math.abs(p.balance).toFixed(2)}\n`;
+                } else {
+                    status = `<span style="color:gray;">is settled</span>`;
+                    whatsappData += `- ${p.name} is settled\n`;
+                }
+                settleBox.innerHTML += `<div class="balance-item"><strong>${p.name}</strong> ${status}</div>`;
+            });
+        }
+
+        function toggleCustom() {
+            const val = document.getElementById('expenseCategory').value;
+            document.getElementById('customCategory').style.display = (val === "Other") ? "block" : "none";
+        }
+
+        async function logExpense() {
+            const payerId = document.getElementById('expensePayer').value;
+            const amount = document.getElementById('expenseAmount').value;
+            let cat = document.getElementById('expenseCategory').value;
+            if (cat === "Other") cat = document.getElementById('customCategory').value;
+
+            if (!payerId || !amount || !cat) return alert("Fill all fields!");
+
+            await fetch('/add-expense', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room_id: roomId, paid_by_id: payerId, amount: amount, category: cat })
+            });
+            document.getElementById('expenseAmount').value = "";
+            document.getElementById('customCategory').value = "";
+            loadRoomData(); 
+        }
+
+        async function deleteExpense(expId) {
+            if(confirm("Delete this expense?")) {
+                await fetch(`/delete-expense/${expId}`, { method: 'DELETE' });
+                loadRoomData();
+            }
+        }
+
+        async function powerReset() {
+            if(confirm("WARNING: This will delete ALL expenses. Proceed?")) {
+                await fetch(`/reset-room/${roomId}`, { method: 'DELETE' });
+                loadRoomData();
+            }
+        }
+
+        async function addRoommate() {
+            const name = document.getElementById('newName').value;
+            const limit = document.getElementById('newLimit').value;
+            if(!name) return alert("Name required!");
+
+            await fetch('/add-roommate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room_id: roomId, name: name, limit: limit ? parseInt(limit) : null })
+            });
+            document.getElementById('newName').value = "";
+            document.getElementById('newLimit').value = "";
+            loadRoomData();
+        }
+
+        function sendWhatsApp() {
+            const encodedText = encodeURIComponent(whatsappData);
+            window.open(`https://wa.me/?text=${encodedText}`, "_blank");
+        }
+
+        loadRoomData();
+    </script>
+</body>
+</html>

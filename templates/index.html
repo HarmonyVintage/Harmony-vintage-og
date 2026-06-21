@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmony Vintage Tracker</title>
+    <style>
+        /* Mobile-First Reset */
+        * { box-sizing: border-box; }
+        
+        body {
+            background-color: #f4ece1; color: #2c3e50; 
+            font-family: 'Georgia', serif; text-align: center; 
+            padding: 20px; margin: 0;
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
+        }
+        .container {
+            background-color: #ffffff; border: 2px solid #8b7355; border-radius: 10px;
+            padding: 30px 20px; width: 100%; max-width: 400px;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 28px; margin-bottom: 5px; color: #5c4033; text-transform: uppercase; letter-spacing: 2px; }
+        p.subtitle { font-style: italic; color: #7f8c8d; margin-bottom: 25px; font-size: 14px; }
+        h3 { font-size: 18px; color: #2c3e50; }
+        
+        input {
+            width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc;
+            border-radius: 5px; font-family: 'Arial', sans-serif; font-size: 16px;
+        }
+        button {
+            background-color: #5c4033; color: white; border: none; padding: 12px 20px;
+            font-size: 16px; font-family: 'Georgia', serif; cursor: pointer;
+            border-radius: 5px; width: 100%; margin-top: 10px; text-transform: uppercase;
+            letter-spacing: 1px; transition: 0.3s;
+        }
+        button:hover { background-color: #3e2a21; }
+        .secondary-btn { background-color: #8b7355; }
+        .secondary-btn:hover { background-color: #6e5a42; }
+        
+        #result, #joinResult { margin-top: 20px; font-weight: bold; font-size: 16px; }
+        .big-code { font-size: 32px; color: #8b7355; letter-spacing: 5px; margin-top: 10px; display: block; }
+        hr { border: 0; height: 1px; background: #8b7355; margin: 30px 0; opacity: 0.3; }
+
+        /* Small Phones Adjustment */
+        @media (max-width: 400px) {
+            h1 { font-size: 24px; }
+            .container { padding: 20px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Harmony Vintage</h1>
+        <p class="subtitle">Premium Global Expense Tracker</p>
+        
+        <h3>Enter Your Room</h3>
+        <input type="text" id="joinCode" placeholder="5-Digit Room Code" maxlength="5" inputmode="numeric">
+        <input type="password" id="joinPassword" placeholder="Room Password">
+        <button class="secondary-btn" onclick="joinRoom()">Access Room</button>
+        <div id="joinResult"></div>
+
+        <hr>
+
+        <h3>Create a New Room</h3>
+        <input type="password" id="roomPassword" placeholder="Set a Room Password">
+        <button onclick="createRoom()">Generate Room</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function createRoom() {
+            const password = document.getElementById('roomPassword').value;
+            const resultDiv = document.getElementById('result');
+            if (!password) { resultDiv.style.color = "red"; resultDiv.innerHTML = "Please enter a password!"; return; }
+            resultDiv.style.color = "#2c3e50"; resultDiv.innerHTML = "Crafting your room...";
+            try {
+                const response = await fetch('/create-room', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.style.color = "#2c3e50"; 
+                    resultDiv.innerHTML = `Success! Room Code: <span class="big-code">${data.room_code}</span>`;
+                } else {
+                    resultDiv.style.color = "red"; resultDiv.innerHTML = "Error: " + data.error;
+                }
+            } catch (error) { resultDiv.style.color = "red"; resultDiv.innerHTML = "Failed to connect."; }
+        }
+
+        async function joinRoom() {
+            const roomCode = document.getElementById('joinCode').value;
+            const password = document.getElementById('joinPassword').value;
+            const joinResultDiv = document.getElementById('joinResult');
+            if (!roomCode || !password) { joinResultDiv.style.color = "red"; joinResultDiv.innerHTML = "Enter code and password!"; return; }
+            joinResultDiv.style.color = "#2c3e50"; joinResultDiv.innerHTML = "Verifying credentials...";
+            try {
+                const response = await fetch('/join-room', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_code: roomCode, password: password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    joinResultDiv.style.color = "#27ae60"; 
+                    joinResultDiv.innerHTML = "Login Successful! Loading dashboard...";
+                    localStorage.setItem('harmony_room_id', data.room_id);
+                    localStorage.setItem('harmony_room_code', roomCode);
+                    window.location.href = "/dashboard";
+                } else {
+                    joinResultDiv.style.color = "red"; joinResultDiv.innerHTML = "Error: " + data.error;
+                }
+            } catch (error) { joinResultDiv.style.color = "red"; joinResultDiv.innerHTML = "Failed to connect."; }
+        }
+    </script>
+</body>
+</html>
